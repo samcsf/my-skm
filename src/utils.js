@@ -1,18 +1,15 @@
-const {STORE_CONF_PATH} = require('./constant')
 const fs = require('fs')
 
-function getState() {
-  try {
-    return JSON.parse(fs.readFileSync(STORE_CONF_PATH))
-  }catch(e){
-    return {}
+function cmpSymLink(linkPath, filePath) {
+  try{
+    if(fs.lstatSync(linkPath).isSymbolicLink()){
+      let refPath = fs.readlinkSync(linkPath)
+      return refPath === filePath
+    }
+  }catch(err){
+    console.log('Error in cmpSymLink(): ' + err.code)
   }
-}
-
-function setState(k, v) {
-  let state = getState()
-  state[k] = v
-  fs.writeFileSync(STORE_CONF_PATH, JSON.stringify(state))
+  return false
 }
 
 function execCMD(res, succ, fail) {
@@ -24,7 +21,6 @@ function execCMD(res, succ, fail) {
 }
 
 module.exports = {
-  getState,
-  setState,
+  cmpSymLink,
   execCMD
 }

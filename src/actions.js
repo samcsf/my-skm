@@ -1,177 +1,170 @@
 const shell = require('shelljs')
 const fs = require('fs')
 const path = require('path')
-const {getState, setState, execCMD} = require('./utils')
-const {
-  DEFAULT_DIR_NAME,
-  DEFAULT_CONF_NAME,
-  STORE_PATH,
-  STORE_CONF_PATH,
-  USER_SSH_STORE,
-  KEY_PRIFIX,
-} = require('./constant')
+const {cmpSymLink, execCMD} = require('./utils')
 
-function initProgram(){
-  // override create mode's parameters to avoid 'unknown option error'
-  let argv = process.argv
-  if (argv[2] === 'create' || argv[2] === 'c') {
-    let bypassOpts = '"' + argv.slice(4).join(' ') + '"'
-    argv = argv.slice(0, 4).concat([bypassOpts])
-    process.argv = argv
-  }
-}
+function generator(config){
+  const {
+    storePath,
+    sshPath,
+    privateKeyName,
+  } = config
 
-function showList(){
-  // load state
-  let current = getState().current
-  // output 
-  for(let d of fs.readdirSync(STORE_PATH)){
-    if (!fs.statSync(path.join(STORE_PATH, d)).isDirectory()) {
-      continue
-    }
-    let arrow = ' ->'
-    let space = '   '
-    console.log(`${d === current ? arrow : space} ${d}`)
+  function checkAliasExist(alias) {
+    return fs.existsSync(path.join(storePath, alias))
   }
-}
+  
+  function checkAliasInUse(alias) {
+    if(!checkAliasExist(alias))
+      return false
+    return cmpSymLink(path.join(sshPath, privateKeyName), path.join(storePath, alias, privateKeyName))
+  }
 
-function initStore() {
-  console.log('Try to initialize the key store.')
-  // check store existense
-  try{
-    fs.mkdirSync(STORE_PATH)
-  }catch(err){
-    if (err.code === 'EEXIST'){
-      console.log('mskm already initialized')
-      console.log('Please remove ' + STORE_PATH + ' if you need to re-initilize.')
-      return 
-    }
+  function reLinkSSH(alias){
+    fs.unlinkSync(path.join(sshPath, privateKeyName))
+    fs.unlinkSync(path.join(sshPath, privateKeyName + '.pub'))
+    fs.symlinkSync(path.join(storePath, alias, privateKeyName), path.join(sshPath, privateKeyName))
+    fs.symlinkSync(path.join(storePath, alias, privateKeyName + '.pub'), path.join(sshPath, privateKeyName + '.pub'))
   }
-  // check keys in default location, if exists backup to alias default
-  let backups = []
-  let items = fs.readdirSync(USER_SSH_STORE)
-  for(let i of items){
-    if (i === KEY_PRIFIX || i === (KEY_PRIFIX + '.pub')) {
-      backups.push(i)
-    }
-  }
-  if (backups.length > 0) {
-    fs.mkdirSync(path.join(STORE_PATH, 'default'))
-    backups.forEach(f =>{
-      fs.copyFileSync(path.join(USER_SSH_STORE, f), path.join(STORE_PATH, 'default', f))
-    })
-    setState('current', 'default')
-  } else {
-    setState('current', '')
-  }
-  console.log('Initialization completed. mskm is ready.')
-}
 
-function switchKeys(alias){
-  // check alias
-  if(!fs.existsSync(path.join(STORE_PATH, alias)))
-    return false
-  if (getState().current === alias) {
-    console.log('Already using ' + alias)
-    showList()
-    return false
-  }
-  // remove from user store
-  try{
-    console.log('Try to clear user keys')
-    fs.unlinkSync(path.join(USER_SSH_STORE, KEY_PRIFIX))
-    fs.unlinkSync(path.join(USER_SSH_STORE, KEY_PRIFIX + '.pub'))
-    console.log('Cleared')
-  } catch(err) {
-    console.log('Nothing to clear, continue')
-  }
-  // copy keys
-  fs.copyFileSync(path.join(STORE_PATH, alias, KEY_PRIFIX), path.join(USER_SSH_STORE, KEY_PRIFIX))
-  fs.copyFileSync(path.join(STORE_PATH, alias, KEY_PRIFIX + '.pub'), path.join(USER_SSH_STORE, KEY_PRIFIX + '.pub'))
-  console.log('Keys of ' + alias + ' already copied to user store')
-  console.log('Now using ' + alias)
-  // update state
-  setState('current', alias)
-  showList()
-  return true
-}
-
-function checkAliasExist(alias) {
-  return fs.existsSync(path.join(STORE_PATH, alias))
-}
-
-function checkAliasInUse(alias) {
-  if(!checkAliasExist(alias))
-    return false
-  return getState().current === alias
-}
-
-function createKeys(alias, options) {
-  // exit when creating duplicate alias
-  if (checkAliasExist(alias)) {
-    console.log('This alias already exists, can not create duplicate names')
-    return
-  }
-  options = JSON.parse(options) // To remove quote mark "" 
-  console.log('Try to create new key with alias ' + alias + ' and options ' + options)
-  // create sub-directory
-  let aliasPath = path.join(STORE_PATH, alias)
-  fs.mkdirSync(aliasPath)
-  // generate keys with ssh-keygen
-  execCMD(
-    shell.exec('ssh-keygen ' + options + ' -f ' + path.join(aliasPath, KEY_PRIFIX)),
-    () => console.log('Key created with alias: ' + alias),
-    () => console.log('Key created fail.')
-  )
-}
-
-function deleteKeys(alias) {
-  if (!checkAliasExist(alias)) {
-    console.log('Invalid alias, no keys removed')
-    return 
-  }
-  if (checkAliasInUse(alias)) {
-    console.log(alias + ' keys are in using, please switch it first')
-    return
-  }
-  console.log('Remove ' + alias)
-  execCMD(
-    shell.rm('-rf', path.join(STORE_PATH, alias)),
-    () => console.log('Remove done.'),
-    () => console.log('Remove failed.')
-  )
-}
-
-function renameKeys(alias, newAlias) {
-  if (!checkAliasExist(alias)) {
-    console.log('Alias ' + alias + ' not exists')
-    return 
-  }
-  if (checkAliasExist(newAlias)) {
-    console.log('Alias ' + newAlias + ' already exists, rename failed')
-    return 
-  }
-  console.log('Rename ' + alias + ' to ' + newAlias)
-  let isInUse = checkAliasInUse(alias)
-  execCMD(
-    shell.mv(path.join(STORE_PATH, alias), path.join(STORE_PATH, newAlias)),
-    () => {
-      // rename state if alias is using
-      if (isInUse) {
-        setState('current', newAlias)
+  function showList(){
+    // output 
+    for(let d of fs.readdirSync(storePath)){
+      // skip non-directory
+      if (!fs.statSync(path.join(storePath, d)).isDirectory()) {
+        continue 
       }
-      console.log(alias + ' successfully renamed to ' + newAlias)
+      let arrow = ' ->'
+      let space = '   '
+      let isInUse = cmpSymLink(path.join(sshPath, privateKeyName), path.join(storePath, d, privateKeyName))
+      console.log(`${isInUse ? arrow : space} ${d}`)
+    }
+  }
+
+  return {
+    initProgram: function initProgram(){
+      // override create mode's parameters to avoid 'unknown option error'
+      let argv = process.argv
+      if (argv[2] === 'create' || argv[2] === 'c') {
+        let bypassOpts = '"' + argv.slice(4).join(' ') + '"'
+        argv = argv.slice(0, 4).concat([bypassOpts])
+        process.argv = argv
+      }
     },
-    () => console.log('Rename failed.')
-  )
+    
+    showList,
+    
+    initStore: function initStore() {
+      console.log('Try to initialize the key store.')
+      // check store existense
+      try{
+        fs.mkdirSync(storePath)
+      }catch(err){
+        if (err.code === 'EEXIST'){
+          console.log('mskm already initialized')
+          console.log('Please remove ' + storePath + ' if you need to re-initilize.')
+          return 
+        }
+      }
+      // check keys in default location, if exists backup to alias default
+      let backups = []
+      let items = fs.readdirSync(sshPath)
+      for(let i of items){
+        if (i === privateKeyName || i === (privateKeyName + '.pub')) {
+          backups.push(i)
+        }
+      }
+      if (backups.length > 0) {
+        fs.mkdirSync(path.join(storePath, 'default'))
+        backups.forEach(f =>{
+          fs.copyFileSync(path.join(sshPath, f), path.join(storePath, 'default', f))
+          fs.unlinkSync(path.join(sshPath, f))
+          fs.symlinkSync(path.join(storePath, 'default', f), path.join(sshPath, f))
+        })
+      }
+      console.log('Initialization completed. mskm is ready.')
+    },
+    
+    switchKeys: function switchKeys(alias){
+      // check alias
+      if(!fs.existsSync(path.join(storePath, alias)))
+        return false
+      if (cmpSymLink(path.join(sshPath, privateKeyName), path.join(storePath, alias))) {
+        console.log('Already using ' + alias)
+        showList()
+        return false
+      }
+      // re link the keys
+      try{
+        reLinkSSH(alias)
+      } catch(err) {
+        console.log(err)
+      }
+      console.log('Keys of ' + alias + ' already linked to user store')
+      console.log('Now using ' + alias)
+      showList()
+      return true
+    },
+    
+    createKeys: function createKeys(alias, options) {
+      // exit when creating duplicate alias
+      if (checkAliasExist(alias)) {
+        console.log('This alias already exists, can not create duplicate names')
+        return
+      }
+      options = JSON.parse(options) // To remove quote mark "" 
+      console.log('Try to create new key with alias ' + alias + ' and options ' + options)
+      // create sub-directory
+      let aliasPath = path.join(storePath, alias)
+      fs.mkdirSync(aliasPath)
+      // generate keys with ssh-keygen
+      execCMD(
+        shell.exec('ssh-keygen ' + options + ' -f ' + path.join(aliasPath, privateKeyName)),
+        () => console.log('Key created with alias: ' + alias),
+        () => console.log('Key created fail.')
+      )
+    },
+    
+    deleteKeys: function deleteKeys(alias) {
+      if (!checkAliasExist(alias)) {
+        console.log('Invalid alias, no keys removed')
+        return 
+      }
+      if (checkAliasInUse(alias)) {
+        console.log(alias + ' keys are in using, please switch it first')
+        return
+      }
+      console.log('Remove ' + alias)
+      execCMD(
+        shell.rm('-rf', path.join(storePath, alias)),
+        () => console.log('Remove done.'),
+        () => console.log('Remove failed.')
+      )
+    },
+    
+    renameKeys: function renameKeys(alias, newAlias) {
+      if (!checkAliasExist(alias)) {
+        console.log('Alias ' + alias + ' not exists')
+        return 
+      }
+      if (checkAliasExist(newAlias)) {
+        console.log('Alias ' + newAlias + ' already exists, rename failed')
+        return 
+      }
+      console.log('Rename ' + alias + ' to ' + newAlias)
+      let isInUse = checkAliasInUse(alias)
+      execCMD(
+        shell.mv(path.join(storePath, alias), path.join(storePath, newAlias)),
+        () => {
+          if (isInUse){
+            reLinkSSH(newAlias)
+          }
+          console.log(alias + ' successfully renamed to ' + newAlias)
+        },
+        () => console.log('Rename failed.')
+      )
+    }
+  }
 }
 
-module.exports = {
-  initProgram,
-  initStore,
-  createKeys,
-  switchKeys,
-  renameKeys,
-  deleteKeys,
-  showList
-}
+module.exports = generator

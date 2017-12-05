@@ -1,6 +1,7 @@
 #! /bin/env node
 
 const program = require('commander')
+const config = require('./src/constant')
 const {
   initProgram, 
   initStore, 
@@ -9,7 +10,7 @@ const {
   switchKeys, 
   deleteKeys, 
   renameKeys
-} = require('./src/actions')
+} = require('./src/actions')(config)
 
 initProgram()
 
