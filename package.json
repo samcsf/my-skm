@@ -1,0 +1,25 @@
+{
+  "name": "my-skm",
+  "version": "0.1.0",
+  "description": "Simple tool to manage SSH keys.",
+  "preferGlobal": true,
+  "bin": {
+    "mskm": "index.js"
+  },
+  "main": "index.js",
+  "scripts": {
+    "test": "mocha"
+  },
+  "keywords": [
+    "SSH"
+  ],
+  "author": "Sam Fu",
+  "license": "MIT",
+  "dependencies": {
+    "commander": "^2.11.0",
+    "shelljs": "^0.7.8"
+  },
+  "devDependencies": {
+    "mocha": "^4.0.1"
+  }
+}
