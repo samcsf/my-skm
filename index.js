@@ -1,7 +1,7 @@
 #! /bin/env node
 
 const program = require('commander')
-const config = require('./src/constant')
+const config = require('./src/config')
 const {
   initProgram, 
   initStore, 

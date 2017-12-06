@@ -10,6 +10,9 @@ function generator(config){
     privateKeyName,
   } = config
 
+  const priKeyPath = path.join(sshPath, privateKeyName)
+  const pubKeyPath = path.join(sshPath, privateKeyName + '.pub')
+
   function checkAliasExist(alias) {
     return fs.existsSync(path.join(storePath, alias))
   }
@@ -17,14 +20,22 @@ function generator(config){
   function checkAliasInUse(alias) {
     if(!checkAliasExist(alias))
       return false
-    return cmpSymLink(path.join(sshPath, privateKeyName), path.join(storePath, alias, privateKeyName))
+    return cmpSymLink(priKeyPath, path.join(storePath, alias, privateKeyName))
   }
 
   function reLinkSSH(alias){
-    fs.unlinkSync(path.join(sshPath, privateKeyName))
-    fs.unlinkSync(path.join(sshPath, privateKeyName + '.pub'))
-    fs.symlinkSync(path.join(storePath, alias, privateKeyName), path.join(sshPath, privateKeyName))
-    fs.symlinkSync(path.join(storePath, alias, privateKeyName + '.pub'), path.join(sshPath, privateKeyName + '.pub'))
+    try{
+      fs.unlinkSync(priKeyPath)
+    }catch(err){
+      console.log('reLinkSSH()' + err.code)
+    }
+    try{
+      fs.unlinkSync(pubKeyPath)
+    }catch(err){
+      console.log('reLinkSSH()' + err.code)
+    }
+    fs.symlinkSync(path.join(storePath, alias, privateKeyName), priKeyPath)
+    fs.symlinkSync(path.join(storePath, alias, privateKeyName + '.pub'), pubKeyPath)
   }
 
   function showList(){
@@ -36,7 +47,7 @@ function generator(config){
       }
       let arrow = ' ->'
       let space = '   '
-      let isInUse = cmpSymLink(path.join(sshPath, privateKeyName), path.join(storePath, d, privateKeyName))
+      let isInUse = cmpSymLink(priKeyPath, path.join(storePath, d, privateKeyName))
       console.log(`${isInUse ? arrow : space} ${d}`)
     }
   }
@@ -87,9 +98,11 @@ function generator(config){
     
     switchKeys: function switchKeys(alias){
       // check alias
-      if(!fs.existsSync(path.join(storePath, alias)))
+      if(!fs.existsSync(path.join(storePath, alias))){
+        console.log('Invalid alias, ' + alias + ' not found')
         return false
-      if (cmpSymLink(path.join(sshPath, privateKeyName), path.join(storePath, alias))) {
+      }
+      if (cmpSymLink(priKeyPath, path.join(storePath, alias))) {
         console.log('Already using ' + alias)
         showList()
         return false
@@ -98,7 +111,7 @@ function generator(config){
       try{
         reLinkSSH(alias)
       } catch(err) {
-        console.log(err)
+        console.log('switchLink() error' + err)
       }
       console.log('Keys of ' + alias + ' already linked to user store')
       console.log('Now using ' + alias)

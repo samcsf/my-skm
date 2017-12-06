@@ -7,7 +7,8 @@ function cmpSymLink(linkPath, filePath) {
       return refPath === filePath
     }
   }catch(err){
-    console.log('Error in cmpSymLink(): ' + err.code)
+    // console.log('Error in cmpSymLink(): ' + err)
+    return false
   }
   return false
 }
