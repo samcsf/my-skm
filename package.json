@@ -1,7 +1,7 @@
 {
   "name": "my-skm",
   "version": "0.1.0",
-  "description": "Simple tool to manage SSH keys.",
+  "description": "git remote add origin https://github.com/samcsf/my-skm.git",
   "preferGlobal": true,
   "bin": {
     "mskm": "index.js"
