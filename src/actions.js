@@ -1,4 +1,5 @@
 const shell = require('shelljs')
+const os = require('os')
 const fs = require('fs')
 const path = require('path')
 const {cmpSymLink, execCMD} = require('./utils')
@@ -53,7 +54,7 @@ function generator(config){
   }
 
   return {
-    initProgram: function initProgram(){
+    initProgram: function (){
       // override create mode's parameters to avoid 'unknown option error'
       let argv = process.argv
       if (argv[2] === 'create' || argv[2] === 'c') {
@@ -65,7 +66,7 @@ function generator(config){
     
     showList,
     
-    initStore: function initStore() {
+    initStore: function () {
       console.log('Try to initialize the key store.')
       // check store existense
       try{
@@ -96,7 +97,7 @@ function generator(config){
       console.log('Initialization completed. mskm is ready.')
     },
     
-    switchKeys: function switchKeys(alias){
+    switchKeys: function (alias){
       // check alias
       if(!fs.existsSync(path.join(storePath, alias))){
         console.log('Invalid alias, ' + alias + ' not found')
@@ -119,7 +120,7 @@ function generator(config){
       return true
     },
     
-    createKeys: function createKeys(alias, options) {
+    createKeys: function (alias, options) {
       // exit when creating duplicate alias
       if (checkAliasExist(alias)) {
         console.log('This alias already exists, can not create duplicate names')
@@ -134,11 +135,11 @@ function generator(config){
       execCMD(
         shell.exec('ssh-keygen ' + options + ' -f ' + path.join(aliasPath, privateKeyName)),
         () => console.log('Key created with alias: ' + alias),
-        () => console.log('Key created fail.')
+        () => console.log('Key created fail. * Create function bases on "ssh-keygen" cli')
       )
     },
     
-    deleteKeys: function deleteKeys(alias) {
+    deleteKeys: function (alias) {
       if (!checkAliasExist(alias)) {
         console.log('Invalid alias, no keys removed')
         return 
@@ -155,7 +156,7 @@ function generator(config){
       )
     },
     
-    renameKeys: function renameKeys(alias, newAlias) {
+    renameKeys: function (alias, newAlias) {
       if (!checkAliasExist(alias)) {
         console.log('Alias ' + alias + ' not exists')
         return 
@@ -176,7 +177,53 @@ function generator(config){
         },
         () => console.log('Rename failed.')
       )
+    },
+
+    backupKeys: function (target){
+      // archive with tar command
+      execCMD(
+        shell.exec(`tar -czvf ${target} -C ${storePath} .`),
+        () => console.log('Store achived to ' + path.resolve(target)),
+        () => console.log('Backup failed. * Backup function bases on "tar" cli.')
+      )
+    },
+    
+    restoreKeys: function (source){
+      // clear store
+      execCMD(
+        shell.rm('-rf', path.join(storePath)),
+        () => console.log('Current store cleared'),
+        () => console.log('Failed to clear current store.')
+      )
+      // restore key sets from archive file
+      console.log('Extracting key sets')
+      execCMD(
+        shell.exec(`tar -zxvf ${source} -C ${os.homedir()}`),
+        () => {
+          console.log('Store restored:')
+          showList()
+        },
+        () => console.log('Failed to restore store.')
+      )
+    },
+
+    sendKey: function(host, alias) {
+      let pubKeyPath = privateKeyName + '.pub'
+      if (alias == null) {
+        pubKeyPath = path.join(sshPath, pubKeyPath)
+      } else {
+        pubKeyPath = path.join(storePath, alias, pubKeyPath)
+      }
+      // Send the public key with ssh-copy-id
+      // archive with tar command
+      execCMD(
+        shell.exec(`ssh-copy-id -i ${pubKeyPath} ${host}`),
+        () => console.log('Identity sent.'),
+        () => console.log('Send keys failed. * Send function bases on "ssh-copy-id" cli.')
+      )
+      
     }
+    
   }
 }
 
