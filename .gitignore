@@ -2,3 +2,7 @@
 .vscode
 npm-debug.log
 design.md
+.nyc_output
+.DS_Store
+coverage/
+coverage.lcov

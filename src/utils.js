@@ -18,7 +18,8 @@ function execCMD(res, succ, fail) {
     return succ(res)
   // fail
   console.log(res.stderr)
-  return fail(res)
+  if (fail !== undefined && typeof fail === 'function' )
+    return fail(res)
 }
 
 module.exports = {

@@ -1,5 +1,4 @@
 const shell = require('shelljs')
-const os = require('os')
 const fs = require('fs')
 const path = require('path')
 const {cmpSymLink, execCMD} = require('./utils')
@@ -19,8 +18,6 @@ function generator(config){
   }
   
   function checkAliasInUse(alias) {
-    if(!checkAliasExist(alias))
-      return false
     return cmpSymLink(priKeyPath, path.join(storePath, alias, privateKeyName))
   }
 
@@ -103,17 +100,13 @@ function generator(config){
         console.log('Invalid alias, ' + alias + ' not found')
         return false
       }
-      if (cmpSymLink(priKeyPath, path.join(storePath, alias))) {
+      if (checkAliasInUse(alias)) {
         console.log('Already using ' + alias)
         showList()
         return false
       }
       // re link the keys
-      try{
-        reLinkSSH(alias)
-      } catch(err) {
-        console.log('switchLink() error' + err)
-      }
+      reLinkSSH(alias)
       console.log('Keys of ' + alias + ' already linked to user store')
       console.log('Now using ' + alias)
       showList()
@@ -151,8 +144,7 @@ function generator(config){
       console.log('Remove ' + alias)
       execCMD(
         shell.rm('-rf', path.join(storePath, alias)),
-        () => console.log('Remove done.'),
-        () => console.log('Remove failed.')
+        () => console.log('Remove done.')
       )
     },
     
@@ -174,8 +166,7 @@ function generator(config){
             reLinkSSH(newAlias)
           }
           console.log(alias + ' successfully renamed to ' + newAlias)
-        },
-        () => console.log('Rename failed.')
+        }
       )
     },
 
@@ -191,14 +182,16 @@ function generator(config){
     restoreKeys: function (source){
       // clear store
       execCMD(
-        shell.rm('-rf', path.join(storePath)),
+        shell.rm('-rf', storePath),
         () => console.log('Current store cleared'),
         () => console.log('Failed to clear current store.')
       )
+      // make store
+      fs.mkdirSync(storePath)
       // restore key sets from archive file
       console.log('Extracting key sets')
       execCMD(
-        shell.exec(`tar -zxvf ${source} -C ${os.homedir()}`),
+        shell.exec(`tar -zxvf ${source} -C ${storePath}`),
         () => {
           console.log('Store restored:')
           showList()
