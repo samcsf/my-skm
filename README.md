@@ -21,7 +21,7 @@ npm install -g my-skm
 ## Usage
 #### Overview
 ```
-  Usage: index <command> [options]
+  Usage: mskm <command> [options]
 
 
   Options:
@@ -95,6 +95,6 @@ Send the identity to remote host, if alias is given will send will alias' public
 mskm send <host> [alias]
 ```
 
-## Licence
+## License
 
 [MIT License](https://github.com/samcsf/my-skm/blob/dev/LICENSE)
