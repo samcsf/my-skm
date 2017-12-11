@@ -1,4 +1,4 @@
-![](./img/logo.png)  
+![](https://github.com/samcsf/my-skm/blob/dev/img/logo.png?raw=true)  
 [![Build Status](https://travis-ci.org/samcsf/my-skm.svg?branch=dev)](https://travis-ci.org/samcsf/my-skm)
 [![codecov](https://codecov.io/gh/samcsf/my-skm/branch/dev/graph/badge.svg)](https://codecov.io/gh/samcsf/my-skm)
 [![MIT licensed](https://img.shields.io/dub/l/vibe-d.svg)](LICENSE) 
