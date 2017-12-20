@@ -304,23 +304,35 @@ describe('My-Skm testing:', function () {
   })
 
   describe('#Send command', function () {
-    it('Will send id differ to given argv', function () {
-      const host = '121.122.123.124'
-      const alias = 'test'
+    it('Will send id with given argv', function () {
+      const host = 'sam@121.122.123.124'
       let expectedCmd = [
-        'ssh-copy-id -i ' + sshPubKeyPath + ' ' + host,
-        'ssh-copy-id -i ' + path.join(storePath, alias, publicKeyName) + ' ' + host
+        'ssh-copy-id -i ' + sshPubKeyPath + ' ' + host
       ]
       let exec = shell.exec
       let cmdString = ''
       // mock shell.exec() to capture command string
       shell.exec = cmd=>{cmdString = cmd; return {code:0}}
-      sendKey(host)
-      assert.deepStrictEqual(cmdString, expectedCmd[0])
-      sendKey(host, alias)
-      assert.deepStrictEqual(cmdString, expectedCmd[1])
+      sendKey(host, '""')
+      assert.deepStrictEqual(cmdString.trimRight(), expectedCmd[0])
       // restore mocking
       shell.exec = exec
+    })
+
+    it('Send mode will parse the other options to string', function () {
+      let expectedArgv = ['node', 'fileName', 'send', 'sam@121.122.123.124', '"-p 29174"']
+      let backupArgv = process.argv
+      process.argv = ['node', 'fileName', 'send', 'sam@121.122.123.124', '-p', '29174']
+      initProgram()
+      let result = process.argv.map(t => t)
+      assert.deepStrictEqual(result, expectedArgv)
+      // should be same for short-form s, '' -> 's'
+      expectedArgv[2] = 's'
+      process.argv = ['node', 'fileName', 's', 'sam@121.122.123.124', '-p', '29174']
+      initProgram()
+      result = process.argv.map(t => t)
+      assert.deepStrictEqual(result, expectedArgv)
+      process.argv = backupArgv
     })
   })
 

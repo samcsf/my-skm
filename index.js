@@ -59,9 +59,9 @@ program
   .action(mskm.restoreKeys)
 
 program
-  .command('send <host> [alias]')
+  .command('send <host> [options]')
   .alias('s')
-  .description('Send identity to <host> omit alias for key inuse.')
+  .description('Send identity to <host>, support ssh-copy-id options.')
   .action(mskm.sendKey)
 
 program.parse(process.argv)

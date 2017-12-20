@@ -1,6 +1,6 @@
 {
   "name": "my-skm",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "git remote add origin https://github.com/samcsf/my-skm.git",
   "preferGlobal": true,
   "bin": {

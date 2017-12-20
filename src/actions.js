@@ -54,7 +54,8 @@ function generator(config){
     initProgram: function (){
       // override create mode's parameters to avoid 'unknown option error'
       let argv = process.argv
-      if (argv[2] === 'create' || argv[2] === 'c') {
+      if ((argv[2] === 'create' || argv[2] === 'c')
+        ||(argv[2] === 'send' || argv[2] === 's')) {
         let bypassOpts = '"' + argv.slice(4).join(' ') + '"'
         argv = argv.slice(0, 4).concat([bypassOpts])
         process.argv = argv
@@ -200,17 +201,13 @@ function generator(config){
       )
     },
 
-    sendKey: function(host, alias) {
+    sendKey: function(host, options) {
       let pubKeyPath = privateKeyName + '.pub'
-      if (alias == null) {
-        pubKeyPath = path.join(sshPath, pubKeyPath)
-      } else {
-        pubKeyPath = path.join(storePath, alias, pubKeyPath)
-      }
+      options = JSON.parse(options) // To remove quote mark "" 
+      pubKeyPath = path.join(sshPath, pubKeyPath)
       // Send the public key with ssh-copy-id
-      // archive with tar command
       execCMD(
-        shell.exec(`ssh-copy-id -i ${pubKeyPath} ${host}`),
+        shell.exec(`ssh-copy-id -i ${pubKeyPath} ${host} ${options}`),
         () => console.log('Identity sent.'),
         () => console.log('Send keys failed. * Send function bases on "ssh-copy-id" cli.')
       )

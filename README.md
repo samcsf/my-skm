@@ -40,7 +40,7 @@ npm install -g my-skm
     rename|rn <alias> [newAlias]  Rename SSH key to new alias
     backup|b <target>             Backup store to <target> achive file.
     restore|r <source>            Restore from <source> achive file.
-    send|s <host> [alias]         Send identity to <host> omit alias for key inuse.
+    send|s <host> [alias]         Send identity to <host>, support ssh-copy-id options.
 ```
 #### Initialize key store
 Before using the command, initialize is required. It will try to create the key store for user keys. If there's already keys in ~/.ssh, it will be saved as alias 'default'.
@@ -90,9 +90,9 @@ Restore all the alias from archiver in specific path.
 mskm restore <source>
 ```
 #### Send keys
-Send the identity to remote host, if alias is given will send will alias' public key. Default sending the public key inusing.
+Send the inusing identity to remote host, support ssh-copy-id options.
 ```
-mskm send <host> [alias]
+mskm send <host> [options]
 ```
 
 ## License
